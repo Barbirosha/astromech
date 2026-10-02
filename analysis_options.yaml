@@ -1,0 +1,11 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+formatter:
+  page_width: 100
+
+linter:
+  rules:
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    # Skill / prompt templates must start with their first line (front matter).
+    leading_newlines_in_multiline_strings: false

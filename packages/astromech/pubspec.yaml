@@ -1,0 +1,19 @@
+name: astromech
+description: Drive a running Flutter debug app from scripts and AI agents - YAML flows, fast in-app widget lookup, hot reload, and a thinking-free check agent for Claude Code.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+resolution: workspace
+
+executables:
+  astromech:
+
+dependencies:
+  vm_service: ^15.1.0
+  yaml: ^3.1.3
+
+dev_dependencies:
+  test: ^1.26.3

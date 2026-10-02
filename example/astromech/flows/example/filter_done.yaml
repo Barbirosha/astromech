@@ -1,0 +1,13 @@
+# Filter "done" shows only done tasks; the chip reads "Filter: done".
+# Precondition: the example app is open on the Tasks list.
+app: dev.astromech.astromech_example
+steps:
+  - goHome: true
+  - tap: { id: filter_button }
+  - tap: { id: filter_done }
+  - tap: { id: filter_apply }
+  - assert: { id: filter_button, text: "Filter: done" }
+  - waitFor: { text: done }
+  - waitGone: { text: open, timeout: 1 }
+  - screenshot: filter_done.png
+  - goHome: true

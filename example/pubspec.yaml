@@ -1,0 +1,24 @@
+name: astromech_example
+description: Example app for astromech - a list with a checkbox filter sheet, a details screen and an upper-case input.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.0
+
+resolution: workspace
+
+dependencies:
+  # A regular dependency: registerAstromech() is called from main(); it is a
+  # no-op and tree-shaken out of release builds.
+  astromech_driver:
+    path: ../packages/astromech_driver
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

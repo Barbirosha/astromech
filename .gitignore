@@ -1,0 +1,7 @@
+.dart_tool/
+build/
+.fvm/
+*.iml
+.idea/
+.DS_Store
+pubspec_overrides.yaml

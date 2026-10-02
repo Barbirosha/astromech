@@ -1,0 +1,11 @@
+# A task's note field turns typed letters upper case.
+# Precondition: the example app is open on the Tasks list.
+app: dev.astromech.astromech_example
+steps:
+  - goHome: true
+  - tap: { id: task_1 }
+  - tap: { id: note_input }
+  - type: abc12
+  - assert: { id: note_input, value: ABC12 }
+  - goHome: true
+  - waitFor: { id: filter_button }

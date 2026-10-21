@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:astromech/src/android.dart';
+import 'package:astromech/src/device.dart';
 import 'package:astromech/src/element_finder.dart';
 import 'package:astromech/src/ui_backend.dart';
 import 'package:vm_service/vm_service.dart';
@@ -30,13 +32,19 @@ class FlutterBackend implements UiBackend {
   final String _uri;
   String _isolateId;
 
-  /// The bundle id the app advertises over mDNS, when it was discovered that way.
+  /// The app's bundle id / package name, when it was discovered.
   final String? appName;
 
-  /// Connects to [uri], or discovers the VM service of [bundleId] on the local
-  /// network - or of the only running debug app with the driver when it is null.
-  static Future<FlutterBackend> connect({required String? bundleId, String? uri}) async {
-    final found = uri == null ? await _cachedOrDiscovered(bundleId) : (uri: uri, name: bundleId);
+  /// Connects to [uri], or discovers the VM service of [bundleId] on [device] -
+  /// or of the only running debug app with the driver when it is null.
+  static Future<FlutterBackend> connect({
+    required Device device,
+    required String? bundleId,
+    String? uri,
+  }) async {
+    final found = uri == null
+        ? await _cachedOrDiscovered(device, bundleId)
+        : (uri: uri, name: bundleId);
     final resolvedUri = found.uri;
     final service = await vmServiceConnectUri(_toWebSocket(resolvedUri));
     final isolateId = await _findDriverIsolate(service);
@@ -232,10 +240,13 @@ class FlutterBackend implements UiBackend {
     return parsed.replace(scheme: 'ws', path: '${path}ws').toString();
   }
 
-  /// The last URI found for [bundleId] if the app behind it still answers, else a fresh mDNS
-  /// lookup - so step-by-step runs don't pay ~1.5 s of discovery each.
-  static Future<({String uri, String? name})> _cachedOrDiscovered(String? bundleId) async {
-    final cache = File('build/astromech/.vm_service_${bundleId ?? 'any'}');
+  /// The last URI found for [bundleId] on [device] if the app behind it still answers, else a
+  /// fresh lookup - so step-by-step runs don't pay ~1.5 s of discovery each.
+  static Future<({String uri, String? name})> _cachedOrDiscovered(
+    Device device,
+    String? bundleId,
+  ) async {
+    final cache = File('build/astromech/.vm_service_${device.id}_${bundleId ?? 'any'}');
     if (cache.existsSync()) {
       final [cachedUri, cachedName, ...] = '${cache.readAsStringSync()}\n'.split('\n');
       if (await _hasDriver(cachedUri.trim())) {
@@ -243,7 +254,10 @@ class FlutterBackend implements UiBackend {
       }
     }
 
-    final discovered = await _discover(bundleId);
+    final discovered = switch (device.platform) {
+      DevicePlatform.ios => await _discover(bundleId),
+      DevicePlatform.android => await _discoverOnAndroid(Adb(device.id), bundleId),
+    };
     cache
       ..createSync(recursive: true)
       ..writeAsStringSync('${discovered.uri}\n${discovered.name}\n');
@@ -276,6 +290,29 @@ class FlutterBackend implements UiBackend {
       }
     }
 
+    return _onlyApp(live, bundleId);
+  }
+
+  /// mDNS doesn't reach out of the emulator, but the engine logs the device-side address to
+  /// logcat - the way `flutter run` finds it too - and adb forwards it to the host.
+  static Future<({String uri, String name})> _discoverOnAndroid(Adb adb, String? bundleId) async {
+    final live = <({String uri, String name})>[];
+    final seenPids = <int>{};
+    for (final logged in vmServicesInLogcat(await adb.flutterLog())) {
+      // The newest address of each process - earlier runs of the app are gone.
+      if (!seenPids.add(logged.pid)) continue;
+      final name = await adb.processName(logged.pid);
+      if (name == null || (bundleId != null && name != bundleId)) continue;
+      final uri = 'http://127.0.0.1:${await adb.forward(logged.port)}${logged.path}';
+      if (await _hasDriver(uri)) live.add((uri: uri, name: name));
+    }
+    return _onlyApp(live, bundleId);
+  }
+
+  static ({String uri, String name}) _onlyApp(
+    List<({String uri, String name})> live,
+    String? bundleId,
+  ) {
     if (live.length == 1) return live.single;
     if (live.isEmpty) {
       throw AppNotReachableException(

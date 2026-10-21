@@ -5,9 +5,10 @@
 //   astromech run <flow.yaml>
 //   astromech run --inline '<yaml steps>'
 //
-// Nothing project-specific has to be passed: the device is the one booted
-// simulator, the app is the one running debug build with registerAstromech()
-// (found via mDNS), the pid file is build/astromech/flutter_run.pid. --device / --app /
+// Nothing project-specific has to be passed: the device is the one booted iOS
+// simulator or running Android emulator / device, the app is the one running
+// debug build with registerAstromech() (found via mDNS on iOS, logcat + adb
+// forward on Android), the pid file is build/astromech/flutter_run.pid. --device / --app /
 // --vm-service / --pid-file override them when several are running.
 //
 // --inline runs steps given on the command line instead of a file - for driving
@@ -30,7 +31,7 @@
 // Backends:
 //   flutter (default) talks to astromech_driver inside a debug build over the VM
 //           service - only the top route, ids under MergeSemantics too, milliseconds per
-//           lookup. Screenshots via `xcrun simctl`.
+//           lookup. Screenshots via `xcrun simctl` / `adb`.
 //   native  reads the OS accessibility tree via mobilecli - any build, ~4 s per lookup.
 //   Hardware buttons and launch / terminate go through mobilecli.
 //
@@ -63,13 +64,13 @@
 
 import 'dart:io';
 
+import 'package:astromech/src/device.dart';
 import 'package:astromech/src/dtd_client.dart';
 import 'package:astromech/src/element_finder.dart';
 import 'package:astromech/src/flow_library.dart';
 import 'package:astromech/src/flutter_backend.dart';
 import 'package:astromech/src/mobilecli.dart';
 import 'package:astromech/src/native_backend.dart';
-import 'package:astromech/src/simulator.dart';
 import 'package:astromech/src/step_validation.dart';
 import 'package:astromech/src/ui_backend.dart';
 import 'package:yaml/yaml.dart';
@@ -115,13 +116,11 @@ Future<void> runCommand(List<String> args) async {
     stderr.writeln('${problems.join('\n')}\n$stepForms');
     exit(65);
   }
-  final String device;
+  final Device device;
   try {
-    device =
-        options.device ??
-        flow['device'] as String? ??
-        Platform.environment['MOBILECLI_DEVICE'] ??
-        await bootedSimulator();
+    device = await pickDevice(
+      options.device ?? flow['device'] as String? ?? Platform.environment['MOBILECLI_DEVICE'],
+    );
   } on DeviceNotFoundException catch (error) {
     stderr.writeln(error.message);
     exit(69);
@@ -131,11 +130,12 @@ Future<void> runCommand(List<String> args) async {
   final flowName = flowPath == null ? 'inline' : flowPath.split('/').last.replaceAll('.yaml', '');
   final outDir = Directory(options.outDir ?? 'build/astromech/$flowName')
     ..createSync(recursive: true);
-  final cli = MobileCli(device: device);
+  final cli = MobileCli(device: device.id);
   final UiBackend backend;
   try {
     backend = options.backend == 'flutter'
         ? await FlutterBackend.connect(
+            device: device,
             uri: options.vmService,
             bundleId: options.app ?? flow['app'] as String?,
           )
@@ -326,7 +326,7 @@ class _FlowRunner {
   });
 
   final MobileCli cli;
-  final String device;
+  final Device device;
   final UiBackend backend;
   final String? app;
   final bool describeAfter;
@@ -575,7 +575,7 @@ class _FlowRunner {
         allSessions.addAll(sessions);
         final session = await pickSession(
           sessions,
-          device: device,
+          device: device.id,
           isOurApp: (s) async {
             final uri = s.vmServiceUri;
             return uri != null && await FlutterBackend.driverIsolateAt(uri) == flutter.isolateId;
@@ -616,9 +616,9 @@ class _FlowRunner {
     throw _StepFailure('not found');
   }
 
-  /// Simulator screenshots without mobilecli for the flutter backend.
+  /// Screenshots without mobilecli for the flutter backend.
   Future<void> _screenshot(String path) {
-    if (backend is FlutterBackend) return simulatorScreenshot(device, path);
+    if (backend is FlutterBackend) return device.screenshot(path);
     return cli.screenshot(path);
   }
 

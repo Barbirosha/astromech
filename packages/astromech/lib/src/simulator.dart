@@ -1,31 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// No single device could be picked automatically.
-class DeviceNotFoundException implements Exception {
-  DeviceNotFoundException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
-
-/// The one booted iOS simulator - so no `--device` is needed in the usual setup.
-Future<String> bootedSimulator() async {
-  final result = await Process.run('xcrun', ['simctl', 'list', 'devices', 'booted', '-j']);
-  if (result.exitCode != 0) {
-    throw DeviceNotFoundException('xcrun simctl failed: ${result.stderr}'.trim());
+/// Booted iOS simulators; empty when there is no Xcode.
+Future<List<({String udid, String name})>> bootedSimulators() async {
+  try {
+    final result = await Process.run('xcrun', ['simctl', 'list', 'devices', 'booted', '-j']);
+    if (result.exitCode != 0) return const [];
+    return bootedDevices(result.stdout as String);
+  } on ProcessException {
+    return const [];
   }
-  final booted = bootedDevices(result.stdout as String);
-  if (booted.length == 1) return booted.single.udid;
-  if (booted.isEmpty) {
-    throw DeviceNotFoundException('No booted simulator - boot one or pass --device.');
-  }
-  throw DeviceNotFoundException(
-    'Several booted simulators - pass --device: '
-    '${booted.map((d) => '${d.udid} (${d.name})').join(', ')}',
-  );
 }
 
 /// Booted devices in `xcrun simctl list devices booted -j` output.

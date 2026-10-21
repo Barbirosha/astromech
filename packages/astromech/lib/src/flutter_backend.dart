@@ -58,18 +58,21 @@ class FlutterBackend implements UiBackend {
 
   /// The isolate with the driver behind [uri] (e.g. an IDE's DDS address), or
   /// null when it can't be reached.
-  static Future<String?> driverIsolateAt(String uri) async {
+  static Future<String?> driverIsolateAt(String uri) =>
+      probeDriverIsolate(uri, const Duration(seconds: 3));
+
+  /// The isolate with the driver behind [uri], or null when it doesn't answer in [timeout].
+  ///
+  /// The timeout covers the whole probe, not just the connect: a suspended app (an earlier
+  /// debug build left in the background) accepts the socket but never answers `getVM`.
+  static Future<String?> probeDriverIsolate(String uri, Duration timeout) async {
+    final connecting = vmServiceConnectUri(_toWebSocket(uri));
     try {
-      final service = await vmServiceConnectUri(
-        _toWebSocket(uri),
-      ).timeout(const Duration(seconds: 3));
-      try {
-        return await _findDriverIsolate(service);
-      } finally {
-        await service.dispose();
-      }
+      return await connecting.then(_findDriverIsolate).timeout(timeout);
     } on Object {
       return null;
+    } finally {
+      unawaited(connecting.then((service) => service.dispose(), onError: (_) {}));
     }
   }
 
@@ -295,20 +298,8 @@ class FlutterBackend implements UiBackend {
     return 'http://127.0.0.1:$port/${authCode == null ? '' : '$authCode/'}';
   }
 
-  static Future<bool> _hasDriver(String uri) async {
-    try {
-      final service = await vmServiceConnectUri(
-        _toWebSocket(uri),
-      ).timeout(const Duration(seconds: 2));
-      try {
-        return await _findDriverIsolate(service) != null;
-      } finally {
-        await service.dispose();
-      }
-    } on Object {
-      return false;
-    }
-  }
+  static Future<bool> _hasDriver(String uri) async =>
+      await probeDriverIsolate(uri, const Duration(seconds: 2)) != null;
 
   /// `dns-sd` never exits on its own - collect what it prints in a short window.
   static Future<String> _runFor(

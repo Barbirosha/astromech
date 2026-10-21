@@ -545,49 +545,69 @@ class _FlowRunner {
   }
 
   Future<String?> _reloadViaIde(FlutterBackend flutter, {required bool restart}) async {
-    final dtdUri = await findDtdUri();
-    if (dtdUri == null) {
+    // Several IDE windows can run at once, each with its own DTD, so we try
+    // every one and use the first whose debug session runs our app.
+    final dtdUris = await findDtdUris();
+    if (dtdUris.isEmpty) {
       throw _StepFailure(
         'no way to reload: no running `flutter run --pid-file $pidFile`, and no IDE debug '
         'session (start the app with F5 in VS Code with the Dart extension)',
       );
     }
 
-    final client = await DtdClient.connect(dtdUri);
-    try {
-      final sessions = await client.getDebugSessions();
-      final session = await pickSession(
-        sessions,
-        device: device,
-        isOurApp: (s) async {
-          final uri = s.vmServiceUri;
-          return uri != null && await FlutterBackend.driverIsolateAt(uri) == flutter.isolateId;
-        },
-      );
-      if (session == null) {
-        throw _StepFailure(
-          'no IDE debug session runs this app on $device'
-          '${sessions.isEmpty ? '' : ' - sessions: ${sessions.join(', ')}'}',
-        );
+    final allSessions = <DebugSession>[];
+    for (final dtdUri in dtdUris) {
+      final DtdClient client;
+      try {
+        client = await DtdClient.connect(dtdUri);
+      } on Object {
+        // A closed IDE window can leave its DevTools process (and --dtd-uri) behind.
+        continue;
       }
+      try {
+        final List<DebugSession> sessions;
+        try {
+          sessions = await client.getDebugSessions();
+        } on DtdException {
+          // A DTD started by another tool has no editor service.
+          continue;
+        }
+        allSessions.addAll(sessions);
+        final session = await pickSession(
+          sessions,
+          device: device,
+          isOurApp: (s) async {
+            final uri = s.vmServiceUri;
+            return uri != null && await FlutterBackend.driverIsolateAt(uri) == flutter.isolateId;
+          },
+        );
+        if (session == null) continue;
 
-      if (restart) {
-        final done = await flutter.reloadWith(
-          () => client.hotRestart(session.id),
-          restart: true,
-          timeout: const Duration(seconds: 30),
-        );
-        if (!done) throw _StepFailure('restart did not happen in 30 s - see the IDE debug console');
-      } else {
-        // The IDE answers once the reload is done, also when nothing changed.
-        await client.hotReload(session.id);
+        if (restart) {
+          final done = await flutter.reloadWith(
+            () => client.hotRestart(session.id),
+            restart: true,
+            timeout: const Duration(seconds: 30),
+          );
+          if (!done) {
+            throw _StepFailure('restart did not happen in 30 s - see the IDE debug console');
+          }
+        } else {
+          // The IDE answers once the reload is done, also when nothing changed.
+          await client.hotReload(session.id);
+        }
+        return 'via ${session.name}';
+      } on DtdException catch (error) {
+        throw _StepFailure('${restart ? 'restart' : 'reload'} via the IDE failed: $error');
+      } finally {
+        await client.close();
       }
-      return 'via ${session.name}';
-    } on DtdException catch (error) {
-      throw _StepFailure('${restart ? 'restart' : 'reload'} via the IDE failed: $error');
-    } finally {
-      await client.close();
     }
+
+    throw _StepFailure(
+      'no IDE debug session runs this app on $device'
+      '${allSessions.isEmpty ? '' : ' - sessions: ${allSessions.join(', ')}'}',
+    );
   }
 
   /// `optional: true` steps (e.g. a one-off intro modal) are skipped when nothing shows up.

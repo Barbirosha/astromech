@@ -2,15 +2,20 @@ import 'package:astromech/src/dtd_client.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('dtdUriFrom finds the address DevTools was started with', () {
+  test('dtdUrisFrom finds every address DevTools was started with, once each', () {
     const processes = '''
 /usr/bin/zsh
 /sdk/bin/dart tooling-daemon --machine
 /sdk/bin/dart devtools --machine --allow-embedding --dtd-uri ws://127.0.0.1:49290/8Z_KSMCGg7o=
+/sdk/bin/dart devtools --machine --allow-embedding --dtd-uri=ws://127.0.0.1:62264/fyzxGie57GQ=
+/sdk/bin/dart devtools --machine --dtd-uri ws://127.0.0.1:49290/8Z_KSMCGg7o=
 ''';
 
-    expect(dtdUriFrom(processes), 'ws://127.0.0.1:49290/8Z_KSMCGg7o=');
-    expect(dtdUriFrom('/usr/bin/zsh'), isNull);
+    expect(dtdUrisFrom(processes), [
+      'ws://127.0.0.1:49290/8Z_KSMCGg7o=',
+      'ws://127.0.0.1:62264/fyzxGie57GQ=',
+    ]);
+    expect(dtdUrisFrom('/usr/bin/zsh'), isEmpty);
   });
 
   test('parseDebugSessions reads id, name, device and VM service address', () {

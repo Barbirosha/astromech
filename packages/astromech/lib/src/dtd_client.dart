@@ -15,17 +15,26 @@ class DebugSession {
   String toString() => '$name ($id)';
 }
 
-/// The DTD address from a process list: the IDE starts DevTools with
-/// `--dtd-uri ws://127.0.0.1:<port>/<token>`.
-String? dtdUriFrom(String processList) {
-  return RegExp(r'--dtd-uri[= ](ws://\S+)').firstMatch(processList)?.group(1);
+/// Every distinct DTD address in a process list, in the order they appear: the IDE
+/// starts DevTools with `--dtd-uri ws://127.0.0.1:<port>/<token>`.
+///
+/// Several IDE windows (each its own Dart Tooling Daemon) can run at once, so
+/// the first `--dtd-uri` is not necessarily the one hosting our app's session.
+List<String> dtdUrisFrom(String processList) {
+  final seen = <String>{};
+  final uris = <String>[];
+  for (final match in RegExp(r'--dtd-uri[= ](ws://\S+)').allMatches(processList)) {
+    final uri = match.group(1);
+    if (uri != null && seen.add(uri)) uris.add(uri);
+  }
+  return uris;
 }
 
-/// The DTD the running IDE (VS Code with the Dart extension) started, if any.
-Future<String?> findDtdUri() async {
+/// Every DTD a running IDE started, across all open windows.
+Future<List<String>> findDtdUris() async {
   final result = await Process.run('ps', ['-axo', 'command']);
-  if (result.exitCode != 0) return null;
-  return dtdUriFrom(result.stdout as String);
+  if (result.exitCode != 0) return const [];
+  return dtdUrisFrom(result.stdout as String);
 }
 
 /// Sessions in an `Editor.getDebugSessions` result.

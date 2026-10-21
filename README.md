@@ -2,7 +2,7 @@
 
 Drive a running Flutter debug app from scripts and AI agents — like an astromech droid plugged into a ship: it sits inside the app and works its systems from there.
 
-> **Beta.** iOS only for now, built for AI agents and tuned against Claude.
+> **Beta.** iOS simulators and Android emulators / devices, built for AI agents and tuned against Claude.
 
 - **Fast**: widgets are found inside the app over the VM service, ~0.1–0.5 s per step instead of seconds for OS accessibility dumps.
 - **Sees what users see**: only the route on top (hit-test based), ids hidden from the OS tree by `MergeSemantics` (checkboxes, radios) included.
@@ -43,7 +43,7 @@ flutter run --pid-file build/astromech/flutter_run.pid
 astromech run --inline '[{describe: true}]'
 ```
 
-The device is the one booted iOS simulator and the app is the one running debug build with the driver (found via mDNS) — `--device` / `--app` / `--vm-service` / `--pid-file` only when several run at once.
+The device is the one booted iOS simulator or running Android emulator / device (`adb devices`), and the app is the one running debug build with the driver — found via mDNS on iOS, via logcat + `adb forward` on Android. `--device` / `--app` / `--vm-service` / `--pid-file` only when several run at once (e.g. a simulator and an emulator both up: `--device emulator-5554`).
 
 ## Commands
 
@@ -55,7 +55,7 @@ astromech list
 astromech check "Filtering tasks by done shows only done tasks"   # Haiku agent, thinking off; needs `claude`
 ```
 
-Options: `--describe-after` (print the screen after the steps), `--timeout <s>` (default step timeout), `--backend native` (OS accessibility tree via [mobilecli](https://github.com/mobile-next/mobilecli) — any app, slower).
+Options: `--device <udid | adb serial>`, `--describe-after` (print the screen after the steps), `--timeout <s>` (default step timeout), `--backend native` (OS accessibility tree via [mobilecli](https://github.com/mobile-next/mobilecli) — any app, slower).
 
 ## Steps
 
@@ -93,7 +93,8 @@ Same tasks, both on Claude Haiku 4.5 without thinking (one run each unless noted
 
 ## Limits
 
-- Debug builds started with `flutter run` (the VM service is needed); iOS simulator. Android is not supported yet.
+- Debug builds started with `flutter run` (the VM service is needed); iOS simulator, Android emulator or device. Android needs `adb` (on PATH, `$ANDROID_HOME` or the default SDK location); the app is found through the VM service line Flutter logs to logcat at start, so a long-running app whose log has rolled over needs a restart (or `--vm-service`) the first time — after that its address is cached.
+- Physical iPhones are untested.
 - Only what is on screen — no scrolling yet.
 - Hot reload needs the app started with F5 in VS Code (Dart extension) or `flutter run --pid-file`; Android Studio / IntelliJ sessions are untested. Changes in `main()` or static state need `restart: true`.
 

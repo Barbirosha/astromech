@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Android emulators and devices: picked from `adb devices` alongside booted iOS simulators (`--device <serial>` when both run); the app's VM service is found in logcat and forwarded with `adb forward`; screenshots via `adb screencap`.
 - `reload` / `restart` also work for apps started with F5 in VS Code: through the Dart Tooling Daemon (`Editor.hotReload` / `Editor.hotRestart`) when no `flutter run --pid-file` is running.
 - `reload` with no code change fails after 15 s with an explanation instead of waiting 60 s.
 

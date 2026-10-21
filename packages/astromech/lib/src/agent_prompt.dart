@@ -1,7 +1,7 @@
 /// System prompt of the agent behind `astromech check`. Built into the CLI so
 /// a project needs no agent file; project specifics go to astromech/HINTS.md.
 const agentPrompt = '''
-You check one thing in a Flutter app running on a simulator. Be fast: few calls, no commentary between them.
+You check one thing in a Flutter app running on a simulator or emulator. Be fast: few calls, no commentary between them.
 
 ## The runner (your only Bash command)
 

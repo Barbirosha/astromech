@@ -1,7 +1,7 @@
 /// `.claude/skills/astromech/SKILL.md` written by `astromech init`.
 const skillTemplate = '''---
 name: astromech
-description: Check, verify or reproduce something in the running Flutter app on a simulator, or see a code change on screen right after a hot reload - reuses a saved astromech flow if one fits, otherwise plans the path from the code, runs it in one call and saves it (astromech CLI + astromech_driver). Use for any "check X on the simulator / device", "does the screen show Y after my change", or writing a device flow.
+description: Check, verify or reproduce something in the running Flutter app on a simulator / emulator, or see a code change on screen right after a hot reload - reuses a saved astromech flow if one fits, otherwise plans the path from the code, runs it in one call and saves it (astromech CLI + astromech_driver). Use for any "check X on the simulator / emulator / device", "does the screen show Y after my change", or writing a device flow.
 ---
 
 # astromech
@@ -11,7 +11,7 @@ The device is never the slow part (a whole flow takes ~3-7 s) - the model is. So
 - **Yourself, in the main session**, when you know the ids: `astromech run --inline '[...]'`.
 - **`astromech check "<what to check>"`** to hand it off without spending main-session context: a Haiku agent with thinking OFF in a separate process. Don't dispatch a subagent for this - it inherits the session's thinking and is ~2x slower.
 
-Nothing project-specific has to be passed: the device is the one booted simulator, the app is the one running debug build with `registerAstromech()`. Project hints for agents live in `astromech/HINTS.md`.
+Nothing project-specific has to be passed: the device is the one booted iOS simulator or running Android emulator (`--device <id>` when both run), the app is the one running debug build with `registerAstromech()`. Project hints for agents live in `astromech/HINTS.md`.
 
 ## Commands
 

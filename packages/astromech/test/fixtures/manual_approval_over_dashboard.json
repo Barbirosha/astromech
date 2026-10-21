@@ -1,0 +1,112 @@
+{
+  "status": "ok",
+  "data": {
+    "elements": [
+      {
+        "ref": "@e1",
+        "type": "ConstrainedBox",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 402,
+          "height": 874
+        }
+      },
+      {
+        "ref": "@e6",
+        "type": "TextField",
+        "label": "User ID",
+        "value": "D",
+        "identifier": "manual_approval_user_id_input",
+        "rect": {
+          "x": 16,
+          "y": 240,
+          "width": 370,
+          "height": 104
+        },
+        "focused": true
+      },
+      {
+        "ref": "@e7",
+        "type": "Button",
+        "label": "Continue",
+        "identifier": "manual_approval_button_continue",
+        "rect": {
+          "x": 16,
+          "y": 469,
+          "width": 370,
+          "height": 48
+        }
+      },
+      {
+        "ref": "@e8",
+        "type": "Button",
+        "identifier": "header_action_left",
+        "rect": {
+          "x": 4,
+          "y": 62,
+          "width": 48,
+          "height": 48
+        }
+      },
+      {
+        "ref": "@e10",
+        "type": "Button",
+        "identifier": "header_action_right",
+        "rect": {
+          "x": 354,
+          "y": 62,
+          "width": 48,
+          "height": 48
+        }
+      },
+      {
+        "ref": "@e15",
+        "type": "Text",
+        "label": "READING EAST > Reading East",
+        "text": "READING EAST > Reading East",
+        "identifier": "dashboard_header_bottom_link",
+        "rect": {
+          "x": -117,
+          "y": 187,
+          "width": 213,
+          "height": 20
+        }
+      },
+      {
+        "ref": "@e16",
+        "type": "Padding",
+        "label": "READING EAST > Reading East",
+        "identifier": "dashboard_header_bottom_link",
+        "rect": {
+          "x": 103,
+          "y": 189,
+          "width": 15,
+          "height": 15
+        }
+      },
+      {
+        "ref": "@e34",
+        "type": "Button",
+        "identifier": "header_action_right",
+        "rect": {
+          "x": 220,
+          "y": 62,
+          "width": 48,
+          "height": 48
+        }
+      },
+      {
+        "ref": "@e47",
+        "type": "Button",
+        "identifier": "header_action_right",
+        "rect": {
+          "x": 220,
+          "y": 62,
+          "width": 48,
+          "height": 48
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+name: astromech_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+workspace:
+  - packages/astromech
+  - packages/astromech_driver
+  - example
+
+dev_dependencies:
+  very_good_analysis: ^10.0.0
